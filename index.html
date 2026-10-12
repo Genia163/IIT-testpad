@@ -19,17 +19,22 @@
 <div class="card">
     <h2>Тест по дисциплине</h2>
     
-    <div id="userInfo">
-        <label>ФИО студента:<br><input type="text" id="studentName" required style="width: 100%; padding: 8px; margin: 10px 0;"></label>
-        <label>Группа:<br><input type="text" id="studentGroup" required style="width: 100%; padding: 8px; margin: 10px 0;"></label>
-    </div>
+    <!-- Скрытый iframe, чтобы страница не перезагружалась при отправке -->
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="if(isSubmitted) { alert('Тест успешно отправлен преподавателю!'); }"></iframe>
 
-    <form id="quizForm">
+    <!-- Форма отправляет данные напрямую в Google Таблицу без ошибок CORS -->
+    <form id="quizForm" action="https://script.google.com/macros/s/AKfycbx3i2f_YcjAeJQR0DHlWVGYzZjX7DPQCw1lh-olQtjbmORN6lrxBZ1n3-WepIJuWog5ug/exec" method="GET" target="hidden_iframe" onsubmit="prepareSubmit(event)">
+        
+        <div id="userInfo">
+            <label>ФИО студента:<br><input type="text" name="name" id="studentName" required style="width: 100%; padding: 8px; margin: 10px 0;"></label>
+            <label>Группа:<br><input type="text" name="group" id="studentGroup" required style="width: 100%; padding: 8px; margin: 10px 0;"></label>
+        </div>
+
         <div class="question">
             <p><b>1. Какой язык программирования используется для веб-разработки на клиенте?</b></p>
             <div class="options">
                 <label><input type="radio" name="q1" value="A"> C++</label>
-                <label><input type="radio" name="q1" value="B"> JavaScript</label>
+                <label><input type="radio" name="q1" value="B" required> JavaScript</label>
                 <label><input type="radio" name="q1" value="C"> Python</label>
             </div>
         </div>
@@ -37,27 +42,32 @@
         <div class="question">
             <p><b>2. Что обозначает аббревиатура HTML?</b></p>
             <div class="options">
-                <label><input type="radio" name="q2" value="A"> HyperText Markup Language</label>
+                <label><input type="radio" name="q2" value="A" required> HyperText Markup Language</label>
                 <label><input type="radio" name="q2" value="B"> High Tech Modern Language</label>
             </div>
         </div>
 
-        <button type="button" onclick="submitQuiz()">Завершить тест</button>
+        <!-- Скрытые поля для передачи баллов -->
+        <input type="hidden" name="score" id="scoreInput" value="0">
+        <input type="hidden" name="total" id="totalInput" value="2">
+
+        <button type="submit">Завершить тест</button>
     </form>
 
     <div id="result"></div>
 </div>
 
 <script>
-    // Правильные ответы
     const correctAnswers = { q1: 'B', q2: 'A' };
+    let isSubmitted = false;
 
-    function submitQuiz() {
+    function prepareSubmit(event) {
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
         if (!name || !group) {
             alert('Пожалуйста, укажите ФИО и группу.');
+            event.preventDefault();
             return;
         }
 
@@ -71,37 +81,13 @@
             }
         }
 
+        // Заполняем скрытые поля перед отправкой
+        document.getElementById('scoreInput').value = score;
+        document.getElementById('totalInput').value = total;
+
         document.getElementById('result').innerText = `Результат: ${score} из ${total}`;
-
-        // Отправка результатов (опционально - через Webhook / Telegram / Google Script)
-        sendResults(name, group, score, total);
+        isSubmitted = true;
     }
-
-    function sendResults(name, group, score, total) {
-    // Вставьте сюда НОВЫЙ URL веб-приложения Google Apps Script
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzkCM5xPSvpa6swn4IE3TQPczthKeUrkWRStU_rOK5ufBl4A1JXHt7u9eH6onAd4Jn6-A/exec';
-
-    // Формируем параметры для GET-запроса
-    const url = new URL(WEB_APP_URL);
-    url.searchParams.append('name', name);
-    url.searchParams.append('group', group);
-    url.searchParams.append('score', score);
-    url.searchParams.append('total', total);
-
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert('Тест успешно отправлен преподавателю!');
-            } else {
-                alert('Ошибка на сервере Google.');
-            }
-        })
-        .catch((error) => {
-            console.error('Ошибка отправки:', error);
-            alert('Произошла ошибка при отправке результатов.');
-        });
-}
 </script>
 
 </body>
