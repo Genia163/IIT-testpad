@@ -16,6 +16,7 @@
         button:hover { background: #0052a3; }
         .hidden { display: none; }
         #resultContainer { text-align: center; font-size: 18px; font-weight: bold; margin-top: 20px; }
+        #dataFrame { display: none; }
     </style>
 </head>
 <body>
@@ -29,7 +30,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Подключение Google...</option>
+                <option value="">Загрузка доступных тестов...</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -47,64 +48,25 @@
     <div id="resultContainer"></div>
 </div>
 
+<!-- Скрытый фрейм для приема данных без зависаний и CORS -->
+<iframe id="dataFrame"></iframe>
+
 <script>
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwyLKYmw8bTIebRmj55nfU8sqTpVjsassnrl-cFzyqixCZoRCoAb-MLyx3NE-jspHBxDQ/exec';
 
     let activeTestName = "";
     let currentQuestions = [];
+    let studentFullName = "";
 
-    // Универсальная функция JSONP (обход CORS и блокировок)
-    function loadViaJSONP(action, params = {}, callback) {
-        const callbackName = 'jsonp_cb_' + Math.random().toString(36.substring(2, 9));
-        
-        let url = `${WEB_APP_URL}?action=${action}&callback=${callbackName}`;
-        for (let key in params) {
-            url += `&${key}=${encodeURIComponent(params[key])}`;
-        }
+    // Обработчик входящих сообщений от фрейма Google
+    window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.type) return;
 
-        // Защита от долгого ответа (холодный старт сервера Google)
-        const timer = setTimeout(() => {
-            cleanup();
-            showError("Сервер Google долго отвечает. Перезагрузите страницу.");
-        }, 15000);
-
-        window[callbackName] = function(response) {
-            clearTimeout(timer);
-            cleanup();
-            callback(response);
-        };
-
-        const script = document.createElement('script');
-        script.id = callbackName;
-        script.src = url;
-        script.onerror = function() {
-            clearTimeout(timer);
-            cleanup();
-            showError("Ошибка");
-        };
-
-        document.body.appendChild(script);
-
-        function cleanup() {
-            if (window[callbackName]) delete window[callbackName];
-            const el = document.getElementById(callbackName);
-            if (el) el.remove();
-        }
-    }
-
-    function showError(msg) {
-        const select = document.getElementById('testSelect');
-        if (select) {
-            select.innerHTML = `<option value="">${msg}</option>`;
-        }
-    }
-
-    // Загрузка списка тестов при открытии страницы
-    window.onload = function() {
-        loadViaJSONP('getTestsList', {}, function(tests) {
+        if (event.data.type === 'testsList') {
+            const tests = event.data.data;
             const select = document.getElementById('testSelect');
             if (!tests || tests.length === 0) {
-                select.innerHTML = '<option value="">Нет доступных тестов в таблице</option>';
+                select.innerHTML = '<option value="">Нет доступных тестов</option>';
                 return;
             }
             select.innerHTML = '<option value="">-- Выберите тест --</option>';
@@ -114,26 +76,10 @@
                 opt.textContent = testName;
                 select.appendChild(opt);
             });
-        });
-    };
-
-    // Загрузка вопросов выбранного теста
-    function loadTest() {
-        const name = document.getElementById('studentName').value.trim();
-        const group = document.getElementById('studentGroup').value.trim();
-        activeTestName = document.getElementById('testSelect').value;
-
-        if (!name || !group || !activeTestName) {
-            alert('Пожалуйста, заполните ФИО, группу и выберите тест.');
-            return;
         }
 
-        document.getElementById('startScreen').classList.add('hidden');
-        document.getElementById('pageTitle').textContent = activeTestName;
-        document.getElementById('questionsContainer').innerHTML = '<p>Загрузка вопросов из таблицы...</p>';
-        document.getElementById('testScreen').classList.remove('hidden');
-
-        loadViaJSONP('getQuestions', { testName: activeTestName }, function(questions) {
+        if (event.data.type === 'questions') {
+            const questions = event.data.data;
             currentQuestions = questions;
             const container = document.getElementById('questionsContainer');
             container.innerHTML = '';
@@ -162,7 +108,40 @@
                 qDiv.innerHTML = html;
                 container.appendChild(qDiv);
             });
-        });
+        }
+
+        if (event.data.type === 'submitResult') {
+            document.getElementById('testScreen').classList.add('hidden');
+            document.getElementById('resultContainer').innerHTML = `
+                <h3>Спасибо, ${studentFullName}!</h3>
+                <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
+            `;
+        }
+    });
+
+    // Запрос списка тестов при загрузке страницы
+    window.onload = function() {
+        document.getElementById('dataFrame').src = `${WEB_APP_URL}?action=getTestsList`;
+    };
+
+    // Загрузка вопросов выбранного теста
+    function loadTest() {
+        const name = document.getElementById('studentName').value.trim();
+        const group = document.getElementById('studentGroup').value.trim();
+        activeTestName = document.getElementById('testSelect').value;
+
+        if (!name || !group || !activeTestName) {
+            alert('Пожалуйста, заполните ФИО, группу и выберите тест.');
+            return;
+        }
+        studentFullName = name;
+
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('pageTitle').textContent = activeTestName;
+        document.getElementById('questionsContainer').innerHTML = '<p>Загрузка вопросов...</p>';
+        document.getElementById('testScreen').classList.remove('hidden');
+
+        document.getElementById('dataFrame').src = `${WEB_APP_URL}?action=getQuestions&testName=${encodeURIComponent(activeTestName)}`;
     }
 
     // Отправка ответов
@@ -172,26 +151,23 @@
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
-        const params = {
-            testName: activeTestName,
-            name: name,
-            group: group
-        };
+        const params = new URLSearchParams();
+        params.append('action', 'submit');
+        params.append('testName', activeTestName);
+        params.append('name', name);
+        params.append('group', group);
 
         currentQuestions.forEach(q => {
             const selected = document.querySelector(`input[name="${q.id}"]:checked`);
             if (selected) {
-                params[q.id] = selected.value;
+                params.append(q.id, selected.value);
             }
         });
 
-        loadViaJSONP('submit', params, function(res) {
-            document.getElementById('testScreen').classList.add('hidden');
-            document.getElementById('resultContainer').innerHTML = `
-                <h3>Спасибо, ${name}!</h3>
-                <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
-            `;
-        });
+        document.getElementById('questionsContainer').innerHTML = '<p>Отправка результатов...</p>';
+        document.getElementById('submitBtn').style.display = 'none';
+
+        document.getElementById('dataFrame').src = `${WEB_APP_URL}?${params.toString()}`;
     }
 </script>
 
