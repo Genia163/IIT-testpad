@@ -16,7 +16,6 @@
         button:hover { background: #0052a3; }
         .hidden { display: none; }
         #resultContainer { text-align: center; font-size: 18px; font-weight: bold; margin-top: 20px; }
-        #dataFrame { display: none; }
     </style>
 </head>
 <body>
@@ -48,22 +47,50 @@
     <div id="resultContainer"></div>
 </div>
 
-<!-- Скрытый iframe для обхода всех ограничений браузеров и телефонов -->
-<iframe id="dataFrame"></iframe>
-
 <script>
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzEgUgsqYMTDz1sc4fes5yec0_sNkAD0dyTklMfUDngUChJuKsZ3dajW_KeOBEQSzNIVg/exec';
+    const WEB_APP_URL = 'ВАШ_URL_ВЕБ_ПРИЛОЖЕНИЯ_GOOGLE';
 
     let activeTestName = "";
     let currentQuestions = [];
-    let studentFullName = "";
 
-    // Безопасный прием данных от скрытого iframe
-    window.addEventListener('message', function(event) {
-        if (!event.data || !event.data.type) return;
+    // Безопасный JSONP с защитой от зависания
+    function jsonp(url, callbackName, successCallback) {
+        const uniqueName = callbackName + '_' + Math.round(Math.random() * 1000000);
+        
+        const timeout = setTimeout(() => {
+            if (window[uniqueName]) {
+                delete window[uniqueName];
+                const el = document.getElementById(uniqueName);
+                if (el) el.remove();
+                const select = document.getElementById('testSelect');
+                if (select && select.value === "") {
+                    select.innerHTML = '<option value="">Ошибка соединения с сервером</option>';
+                }
+            }
+        }, 10000); // Таймаут 10 секунд
 
-        if (event.data.type === 'testsList') {
-            const tests = event.data.data;
+        window[uniqueName] = function(data) {
+            clearTimeout(timeout);
+            successCallback(data);
+            const el = document.getElementById(uniqueName);
+            if (el) el.remove();
+            delete window[uniqueName];
+        };
+
+        const script = document.createElement('script');
+        script.id = uniqueName;
+        script.src = `${url}&callback=${uniqueName}`;
+        script.onerror = function() {
+            clearTimeout(timeout);
+            const select = document.getElementById('testSelect');
+            if (select) select.innerHTML = '<option value="">Ошибка соединения с сервером</option>';
+        };
+        document.body.appendChild(script);
+    }
+
+    // Загрузка списка тестов при открытии страницы
+    window.onload = function() {
+        jsonp(`${WEB_APP_URL}?action=getTestsList`, 'cbTests', function(tests) {
             const select = document.getElementById('testSelect');
             if (!tests || tests.length === 0) {
                 select.innerHTML = '<option value="">Нет доступных тестов</option>';
@@ -76,10 +103,26 @@
                 opt.textContent = testName;
                 select.appendChild(opt);
             });
+        });
+    };
+
+    // Загрузка вопросов выбранного теста
+    function loadTest() {
+        const name = document.getElementById('studentName').value.trim();
+        const group = document.getElementById('studentGroup').value.trim();
+        activeTestName = document.getElementById('testSelect').value;
+
+        if (!name || !group || !activeTestName) {
+            alert('Пожалуйста, заполните ФИО, группу и выберите тест.');
+            return;
         }
 
-        if (event.data.type === 'questions') {
-            const questions = event.data.data;
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('pageTitle').textContent = activeTestName;
+        document.getElementById('questionsContainer').innerHTML = '<p>Загрузка вопросов...</p>';
+        document.getElementById('testScreen').classList.remove('hidden');
+
+        jsonp(`${WEB_APP_URL}?action=getQuestions&testName=${encodeURIComponent(activeTestName)}`, 'cbQuestions', function(questions) {
             currentQuestions = questions;
             const container = document.getElementById('questionsContainer');
             container.innerHTML = '';
@@ -108,40 +151,7 @@
                 qDiv.innerHTML = html;
                 container.appendChild(qDiv);
             });
-        }
-
-        if (event.data.type === 'submitResult') {
-            document.getElementById('testScreen').classList.add('hidden');
-            document.getElementById('resultContainer').innerHTML = `
-                <h3>Спасибо, ${studentFullName}!</h3>
-                <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
-            `;
-        }
-    });
-
-    // Загрузка списка тестов при открытии страницы
-    window.onload = function() {
-        document.getElementById('dataFrame').src = `${WEB_APP_URL}?action=getTestsList`;
-    };
-
-    // Загрузка вопросов выбранного теста
-    function loadTest() {
-        const name = document.getElementById('studentName').value.trim();
-        const group = document.getElementById('studentGroup').value.trim();
-        activeTestName = document.getElementById('testSelect').value;
-
-        if (!name || !group || !activeTestName) {
-            alert('Пожалуйста, заполните ФИО, группу и выберите тест.');
-            return;
-        }
-        studentFullName = name;
-
-        document.getElementById('startScreen').classList.add('hidden');
-        document.getElementById('pageTitle').textContent = activeTestName;
-        document.getElementById('questionsContainer').innerHTML = '<p>Загрузка вопросов...</p>';
-        document.getElementById('testScreen').classList.remove('hidden');
-
-        document.getElementById('dataFrame').src = `${WEB_APP_URL}?action=getQuestions&testName=${encodeURIComponent(activeTestName)}`;
+        });
     }
 
     // Отправка ответов
@@ -164,11 +174,15 @@
             }
         });
 
-        document.getElementById('questionsContainer').innerHTML = '<p>Отправка результатов...</p>';
-        document.getElementById('submitBtn').style.display = 'none';
+        // Отправка через пиксель
+        const img = new Image();
+        img.src = `${WEB_APP_URL}?${params.toString()}`;
 
-        // Отправка через скрытый iframe
-        document.getElementById('dataFrame').src = `${WEB_APP_URL}?${params.toString()}`;
+        document.getElementById('testScreen').classList.add('hidden');
+        document.getElementById('resultContainer').innerHTML = `
+            <h3>Спасибо, ${name}!</h3>
+            <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
+        `;
     }
 </script>
 
