@@ -162,28 +162,34 @@
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
+        // Упаковываем ответы в компактный объект
+        const answersObj = {};
+        currentQuestions.forEach(q => {
+            const selected = document.querySelector(`input[name="${q.id}"]:checked`);
+            if (selected) {
+                answersObj[q.id] = selected.value;
+            }
+        });
+
+        // Формируем параметры запроса
         const params = new URLSearchParams();
         params.append('action', 'submit');
         params.append('testName', activeTestName);
         params.append('name', name);
         params.append('group', group);
+        params.append('answers', JSON.stringify(answersObj));
 
-        currentQuestions.forEach(q => {
-            const selected = document.querySelector(`input[name="${q.id}"]:checked`);
-            if (selected) {
-                params.append(q.id, selected.value);
-            }
+        document.getElementById('questionsContainer').innerHTML = '<p>Отправка результатов на сервер...</p>';
+        document.getElementById('submitBtn').style.display = 'none';
+
+        // Отправляем через ту же функцию jsonp, чтобы сервер корректно принял данные
+        jsonp(`${WEB_APP_URL}?${params.toString()}`, function(res) {
+            document.getElementById('testScreen').classList.add('hidden');
+            document.getElementById('resultContainer').innerHTML = `
+                <h3>Спасибо, ${name}!</h3>
+                <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
+            `;
         });
-
-        // Отправка результатов
-        const img = new Image();
-        img.src = `${WEB_APP_URL}?${params.toString()}`;
-
-        document.getElementById('testScreen').classList.add('hidden');
-        document.getElementById('resultContainer').innerHTML = `
-            <h3>Спасибо, ${name}!</h3>
-            <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
-        `;
     }
 </script>
 
