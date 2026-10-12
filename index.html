@@ -78,31 +78,29 @@
     }
 
     function sendResults(name, group, score, total) {
-    // Вставьте сюда URL, который вы скопировали из Google Apps Script
+    // Вставьте сюда НОВЫЙ URL веб-приложения Google Apps Script
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxA5m0UOIBjFfqIucrcxtc_Rc9siDxMHkyPwJUU50Hj3aA7O-k4FJXoRnt_vm_X0otEAA/exec';
 
-    const data = {
-        name: name,
-        group: group,
-        score: score,
-        total: total
-    };
+    // Формируем параметры для GET-запроса
+    const url = new URL(WEB_APP_URL);
+    url.searchParams.append('name', name);
+    url.searchParams.append('group', group);
+    url.searchParams.append('score', score);
+    url.searchParams.append('total', total);
 
-    fetch(WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors', // Важно для обхода блокировок CORS при запросе к Google Скриптам
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-    })
-    .then(() => {
-        alert('Тест успешно отправлен преподавателю!');
-    })
-    .catch((error) => {
-        console.error('Ошибка отправки:', error);
-        alert('Произошла ошибка при отправке результатов.');
-    });
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Тест успешно отправлен преподавателю!');
+            } else {
+                alert('Ошибка на сервере Google.');
+            }
+        })
+        .catch((error) => {
+            console.error('Ошибка отправки:', error);
+            alert('Произошла ошибка при отправке результатов.');
+        });
 }
 </script>
 
