@@ -29,7 +29,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Загрузка доступных тестов...</option>
+                <option value="">Подключение к серверу (ожидание)...</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -53,7 +53,7 @@
     let activeTestName = "";
     let currentQuestions = [];
 
-    // JSONP с защитой от бесконечного зависания (таймаут 10 секунд)
+    // JSONP с увеличенным до 25 секунд таймаутом для мобильных сетей
     function jsonp(url, successCallback) {
         const uniqueName = 'cb_' + Math.random().toString(36).substring(2, 9);
         
@@ -61,9 +61,9 @@
             cleanup();
             const select = document.getElementById('testSelect');
             if (select && select.value === "") {
-                select.innerHTML = '<option value="">Ошибка: проверьте права доступа ("Все")</option>';
+                select.innerHTML = '<option value="">Сервер долго отвечает. Обновите страницу.</option>';
             }
-        }, 10000);
+        }, 25000); // 25 секунд для мобильного интернета
 
         window[uniqueName] = function(data) {
             clearTimeout(timer);
