@@ -3,87 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Онлайн-тестирование</title>
+    <title>Кафедральное тестирование</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 600px; padding: 0 20px; line-height: 1.6; }
-        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); }
-        .question { margin-bottom: 20px; }
-        .options label { display: block; margin: 8px 0; cursor: pointer; }
-        button { background: #0066cc; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 600px; padding: 0 20px; line-height: 1.6; background: #f9f9f9; }
+        .card { border: 1px solid #ccc; padding: 25px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); background: #fff; }
+        .question { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        .question-title { font-weight: bold; }
+        .points-badge { background: #eef2f7; color: #0066cc; padding: 2px 8px; border-radius: 4px; font-size: 13px; float: right; }
+        .options label { display: block; margin: 10px 0; cursor: pointer; }
+        select, input[type="text"] { width: 100%; padding: 10px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #0066cc; color: #fff; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
         button:hover { background: #0052a3; }
-        #result { margin-top: 20px; font-weight: bold; font-size: 18px; }
+        .hidden { display: none; }
+        #resultContainer { text-align: center; font-size: 18px; font-weight: bold; margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Тест по дисциплине</h2>
-    
-    <!-- Скрытый iframe для приёма ответа без перезагрузки -->
-    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="if(isSubmitted) { alert('Тест успешно отправлен преподавателю!'); }"></iframe>
+    <h2 id="pageTitle">Портал тестирования кафедры</h2>
 
-    <form id="quizForm" action="https://script.google.com/macros/s/AKfycbx3i2f_YcjAeJQR0DHlWVGYzZjX7DPQCw1lh-olQtjbmORN6lrxBZ1n3-WepIJuWog5ug/exec" method="GET" target="hidden_iframe" onsubmit="prepareSubmit(event)">
-        
-        <div id="userInfo">
-            <label>ФИО студента:<br><input type="text" name="name" id="studentName" required style="width: 100%; padding: 8px; margin: 10px 0;"></label>
-            <label>Группа:<br><input type="text" name="group" id="studentGroup" required style="width: 100%; padding: 8px; margin: 10px 0;"></label>
-        </div>
+    <!-- Стартовое окно -->
+    <div id="startScreen">
+        <label>ФИО студента:<br><input type="text" id="studentName" placeholder="Иванов Иван" required></label>
+        <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
+        <label>Выберите дисциплину / тест:<br>
+            <select id="testSelect">
+                <option value="">Загрузка доступных тестов...</option>
+            </select>
+        </label>
+        <button type="button" onclick="loadTest()">Начать тестирование</button>
+    </div>
 
-        <div class="question">
-            <p><b>1. Какой язык программирования используется для веб-разработки на клиенте?</b></p>
-            <div class="options">
-                <label><input type="radio" name="q1" value="A"> C++</label>
-                <label><input type="radio" name="q1" value="B" required> JavaScript</label>
-                <label><input type="radio" name="q1" value="C"> Python</label>
-            </div>
-        </div>
+    <!-- Окно прохождения теста -->
+    <div id="testScreen" class="hidden">
+        <form id="quizForm" onsubmit="submitQuiz(event)">
+            <div id="questionsContainer"></div>
+            <button type="submit" id="submitBtn">Завершить и отправить тест</button>
+        </form>
+    </div>
 
-        <div class="question">
-            <p><b>2. Что обозначает аббревиатура HTML?</b></p>
-            <div class="options">
-                <label><input type="radio" name="q2" value="A" required> HyperText Markup Language</label>
-                <label><input type="radio" name="q2" value="B"> High Tech Modern Language</label>
-            </div>
-        </div>
-
-        <input type="hidden" name="score" id="scoreInput" value="0">
-        <input type="hidden" name="total" id="totalInput" value="2">
-
-        <button type="submit">Завершить тест</button>
-    </form>
-
-    <div id="result"></div>
+    <!-- Окно результатов -->
+    <div id="resultContainer"></div>
 </div>
 
 <script>
-    const correctAnswers = { q1: 'B', q2: 'A' };
-    let isSubmitted = false;
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbybzpWuY1lR_Aap37iccsFxN7cLHTg1Cvwp0xW-fObVwDWmftJJl4DrDVFumjadmbC4qA/exec';
 
-    function prepareSubmit(event) {
+    let activeTestName = "";
+    let currentQuestions = [];
+
+    window.onload = function() {
+        fetch(`${WEB_APP_URL}?action=getTestsList`)
+            .then(res => res.json())
+            .then(tests => {
+                const select = document.getElementById('testSelect');
+                if (tests.length === 0) {
+                    select.innerHTML = '<option value="">Нет доступных тестов</option>';
+                    return;
+                }
+                select.innerHTML = '<option value="">-- Выберите тест --</option>';
+                tests.forEach(testName => {
+                    let opt = document.createElement('option');
+                    opt.value = testName;
+                    opt.textContent = testName;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                console.error("Ошибка загрузки тестов:", err);
+                document.getElementById('testSelect').innerHTML = '<option value="">Ошибка соединения с сервером</option>';
+            });
+    };
+
+    function loadTest() {
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
+        activeTestName = document.getElementById('testSelect').value;
 
-        if (!name || !group) {
-            alert('Пожалуйста, укажите ФИО и группу.');
-            event.preventDefault();
+        if (!name || !group || !activeTestName) {
+            alert('Пожалуйста, заполните ФИО, группу и выберите тест.');
             return;
         }
 
-        let score = 0;
-        let total = Object.keys(correctAnswers).length;
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('pageTitle').textContent = activeTestName;
+        document.getElementById('questionsContainer').innerHTML = '<p>Загрузка вопросов...</p>';
+        document.getElementById('testScreen').classList.remove('hidden');
 
-        for (let q in correctAnswers) {
-            const selected = document.querySelector(`input[name="${q}"]:checked`);
-            if (selected && selected.value === correctAnswers[q]) {
-                score++;
+        fetch(`${WEB_APP_URL}?action=getQuestions&testName=${encodeURIComponent(activeTestName)}`)
+            .then(res => res.json())
+            .then(questions => {
+                currentQuestions = questions;
+                const container = document.getElementById('questionsContainer');
+                container.innerHTML = '';
+
+                if (questions.length === 0) {
+                    container.innerHTML = '<p>В этом тесте пока нет вопросов.</p>';
+                    document.getElementById('submitBtn').style.display = 'none';
+                    return;
+                }
+
+                questions.forEach((q, index) => {
+                    let qDiv = document.createElement('div');
+                    qDiv.className = 'question';
+                    
+                    let html = `
+                        <p class="question-title">
+                            <span>${index + 1}. ${q.text}</span>
+                            <span class="points-badge">Баллов: ${q.points}</span>
+                        </p>
+                        <div class="options">
+                    `;
+                    for (let optKey in q.options) {
+                        html += `<label><input type="radio" name="${q.id}" value="${optKey}" required> <b>${optKey})</b> ${q.options[optKey]}</label>`;
+                    }
+                    html += `</div>`;
+                    qDiv.innerHTML = html;
+                    container.appendChild(qDiv);
+                });
+            })
+            .catch(err => {
+                console.error("Ошибка:", err);
+                alert('Не удалось загрузить вопросы теста.');
+            });
+    }
+
+    function submitQuiz(event) {
+        event.preventDefault();
+
+        const name = document.getElementById('studentName').value.trim();
+        const group = document.getElementById('studentGroup').value.trim();
+
+        const params = new URLSearchParams();
+        params.append('action', 'submit');
+        params.append('testName', activeTestName);
+        params.append('name', name);
+        params.append('group', group);
+
+        currentQuestions.forEach(q => {
+            const selected = document.querySelector(`input[name="${q.id}"]:checked`);
+            if (selected) {
+                params.append(q.id, selected.value);
             }
-        }
+        });
 
-        document.getElementById('scoreInput').value = score;
-        document.getElementById('totalInput').value = total;
+        const img = new Image();
+        img.src = `${WEB_APP_URL}?${params.toString()}`;
 
-        document.getElementById('result').innerText = `Результат: ${score} из ${total}`;
-        isSubmitted = true;
+        document.getElementById('testScreen').classList.add('hidden');
+        document.getElementById('resultContainer').innerHTML = `
+            <h3>Спасибо, ${name}!</h3>
+            <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
+        `;
     }
 </script>
 
