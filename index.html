@@ -29,7 +29,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Подключение к таблице Google...</option>
+                <option value="">Подключение Google...</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -80,7 +80,7 @@
         script.onerror = function() {
             clearTimeout(timer);
             cleanup();
-            showError("Ошибка соединения с сервером Google");
+            showError("Ошибка");
         };
 
         document.body.appendChild(script);
