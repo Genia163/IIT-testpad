@@ -135,6 +135,9 @@
             }
 
             questions.forEach((q, index) => {
+                // 🔍 Выводим в консоль весь объект вопроса, чтобы проверить поле topic
+                console.log("Вопрос №" + (index + 1), q);
+            
                 let qDiv = document.createElement('div');
                 qDiv.className = 'question';
                 
