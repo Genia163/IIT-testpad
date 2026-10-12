@@ -139,6 +139,7 @@
                 qDiv.className = 'question';
                 
                 let html = `
+                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">📂 Тема: <b>${q.topic || 'Общие'}</b></div>
                     <p class="question-title">
                         <span>${index + 1}. ${q.text}</span>
                         <span class="points-badge">Баллов: ${q.points}</span>
