@@ -19,10 +19,9 @@
 <div class="card">
     <h2>Тест по дисциплине</h2>
     
-    <!-- Скрытый iframe, чтобы страница не перезагружалась при отправке -->
+    <!-- Скрытый iframe для приёма ответа без перезагрузки -->
     <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="if(isSubmitted) { alert('Тест успешно отправлен преподавателю!'); }"></iframe>
 
-    <!-- Форма отправляет данные напрямую в Google Таблицу без ошибок CORS -->
     <form id="quizForm" action="https://script.google.com/macros/s/AKfycbx3i2f_YcjAeJQR0DHlWVGYzZjX7DPQCw1lh-olQtjbmORN6lrxBZ1n3-WepIJuWog5ug/exec" method="GET" target="hidden_iframe" onsubmit="prepareSubmit(event)">
         
         <div id="userInfo">
@@ -47,7 +46,6 @@
             </div>
         </div>
 
-        <!-- Скрытые поля для передачи баллов -->
         <input type="hidden" name="score" id="scoreInput" value="0">
         <input type="hidden" name="total" id="totalInput" value="2">
 
@@ -81,7 +79,6 @@
             }
         }
 
-        // Заполняем скрытые поля перед отправкой
         document.getElementById('scoreInput').value = score;
         document.getElementById('totalInput').value = total;
 
