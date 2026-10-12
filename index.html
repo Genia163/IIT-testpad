@@ -29,7 +29,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Загрузка </option>
+                <option value="">Загрузка доступных тестов...</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -48,7 +48,7 @@
 </div>
 
 <script>
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwyLKYmw8bTIebRmj55nfU8sqTpVjsassnrl-cFzyqixCZoRCoAb-MLyx3NE-jspHBxDQ/exec';
+    const WEB_APP_URL = 'ВАШ_URL_ВЕБ_ПРИЛОЖЕНИЯ_GOOGLE';
 
     let activeTestName = "";
     let currentQuestions = [];
@@ -162,29 +162,18 @@
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
-        const answersObj = {};
+        const params = new URLSearchParams();
+        params.append('action', 'submit');
+        params.append('testName', activeTestName);
+        params.append('name', name);
+        params.append('group', group);
+
         currentQuestions.forEach(q => {
             const selected = document.querySelector(`input[name="${q.id}"]:checked`);
             if (selected) {
-                answersObj[q.id] = selected.value;
+                params.append(q.id, selected.value);
             }
         });
-
-        const params = {
-            testName: activeTestName,
-            name: name,
-            group: group,
-            answers: JSON.stringify(answersObj)
-        };
-
-        loadViaJSONP('submit', params, function(res) {
-            document.getElementById('testScreen').classList.add('hidden');
-            document.getElementById('resultContainer').innerHTML = `
-                <h3>Спасибо, ${name}!</h3>
-                <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
-            `;
-        });
-    }
 
         // Отправка результатов
         const img = new Image();
