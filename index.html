@@ -162,7 +162,7 @@
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
-        // Упаковываем ответы в компактный объект
+        // Собираем ответы
         const answersObj = {};
         currentQuestions.forEach(q => {
             const selected = document.querySelector(`input[name="${q.id}"]:checked`);
@@ -171,7 +171,12 @@
             }
         });
 
-        // Формируем параметры запроса
+        // ВЫВОД В КОНСОЛЬ БРАУЗЕРА (нажмите F12 -> Console)
+        console.log("🔍 [GitHub Pages] ФИО:", name);
+        console.log("🔍 [GitHub Pages] Группа:", group);
+        console.log("🔍 [GitHub Pages] Выбранные ответы объекта:", answersObj);
+        console.log("🔍 [GitHub Pages] JSON строка ответов:", JSON.stringify(answersObj));
+
         const params = new URLSearchParams();
         params.append('action', 'submit');
         params.append('testName', activeTestName);
@@ -182,8 +187,8 @@
         document.getElementById('questionsContainer').innerHTML = '<p>Отправка результатов на сервер...</p>';
         document.getElementById('submitBtn').style.display = 'none';
 
-        // Отправляем через ту же функцию jsonp, чтобы сервер корректно принял данные
         jsonp(`${WEB_APP_URL}?${params.toString()}`, function(res) {
+            console.log("🔍 [GitHub Pages] Ответ от сервера получен:", res);
             document.getElementById('testScreen').classList.add('hidden');
             document.getElementById('resultContainer').innerHTML = `
                 <h3>Спасибо, ${name}!</h3>
