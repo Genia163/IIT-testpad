@@ -16,6 +16,7 @@
         button:hover { background: #0052a3; }
         .hidden { display: none; }
         #resultContainer { text-align: center; font-size: 18px; font-weight: bold; margin-top: 20px; }
+        .loading-text { color: #666; font-style: italic; }
     </style>
 </head>
 <body>
@@ -29,7 +30,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Загрузка доступных тестов...</option>
+                <option value="">Подключение к таблице Google...</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -49,19 +50,23 @@
 
 <script>
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzD8Fpx7bseBr08QMyHm_frzZQf1C3EG0X3zJ-8YZ6MzFfycElSr2WoO1c6XQv8h13qvQ/exec';
-    const PROXY_URL = 'https://api.allorigins.win/raw?url=';
+    const PROXY_URL = 'https://corsproxy.io/?';
 
     let activeTestName = "";
     let currentQuestions = [];
 
-    // Загрузка списка тестов через защищенный шлюз (работает во всех браузерах и на телефонах)
+    // Загрузка списка тестов при открытии страницы
     window.onload = function() {
+        const select = document.getElementById('testSelect');
+        
         fetch(PROXY_URL + encodeURIComponent(WEB_APP_URL + '?action=getTestsList'))
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('Ошибка сети');
+                return res.json();
+            })
             .then(tests => {
-                const select = document.getElementById('testSelect');
                 if (!tests || tests.length === 0) {
-                    select.innerHTML = '<option value="">Нет доступных тестов</option>';
+                    select.innerHTML = '<option value="">Нет доступных тестов в таблице</option>';
                     return;
                 }
                 select.innerHTML = '<option value="">-- Выберите тест --</option>';
@@ -74,7 +79,7 @@
             })
             .catch(err => {
                 console.error("Ошибка загрузки:", err);
-                document.getElementById('testSelect').innerHTML = '<option value="">Ошибка соединения с сервером</option>';
+                select.innerHTML = '<option value="">Ошибка соединения с сервером Google</option>';
             });
     };
 
@@ -91,7 +96,7 @@
 
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('pageTitle').textContent = activeTestName;
-        document.getElementById('questionsContainer').innerHTML = '<p>Загрузка вопросов...</p>';
+        document.getElementById('questionsContainer').innerHTML = '<p class="loading-text">Загрузка вопросов из таблицы...</p>';
         document.getElementById('testScreen').classList.remove('hidden');
 
         fetch(PROXY_URL + encodeURIComponent(WEB_APP_URL + `?action=getQuestions&testName=${encodeURIComponent(activeTestName)}`))
