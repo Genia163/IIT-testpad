@@ -48,62 +48,34 @@
 </div>
 
 <script>
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwvprU2Gb2S11q0O2ktRbmcOn3TwwfOO1GhbWA5ZOgGjcZZey8z4MOOdYdQdgMZjWhnrA/exec';
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbznMLZql09cxTALHJhtC3QAWIbhtY535foZ5rtxxl2AlGBTSvVbAZk-EhDVMp6mrCv4/exec';
+    const PROXY_URL = 'https://api.allorigins.win/raw?url=';
 
     let activeTestName = "";
     let currentQuestions = [];
 
-    // Безопасный JSONP с защитой от зависания
-    function jsonp(url, callbackName, successCallback) {
-        const uniqueName = callbackName + '_' + Math.round(Math.random() * 1000000);
-        
-        const timeout = setTimeout(() => {
-            if (window[uniqueName]) {
-                delete window[uniqueName];
-                const el = document.getElementById(uniqueName);
-                if (el) el.remove();
-                const select = document.getElementById('testSelect');
-                if (select && select.value === "") {
-                    select.innerHTML = '<option value="">Ошибка соединения с сервером</option>';
-                }
-            }
-        }, 10000); // Таймаут 10 секунд
-
-        window[uniqueName] = function(data) {
-            clearTimeout(timeout);
-            successCallback(data);
-            const el = document.getElementById(uniqueName);
-            if (el) el.remove();
-            delete window[uniqueName];
-        };
-
-        const script = document.createElement('script');
-        script.id = uniqueName;
-        script.src = `${url}&callback=${uniqueName}`;
-        script.onerror = function() {
-            clearTimeout(timeout);
-            const select = document.getElementById('testSelect');
-            if (select) select.innerHTML = '<option value="">Ошибка соединения с сервером</option>';
-        };
-        document.body.appendChild(script);
-    }
-
-    // Загрузка списка тестов при открытии страницы
+    // Загрузка списка тестов через защищенный шлюз (работает во всех браузерах и на телефонах)
     window.onload = function() {
-        jsonp(`${WEB_APP_URL}?action=getTestsList`, 'cbTests', function(tests) {
-            const select = document.getElementById('testSelect');
-            if (!tests || tests.length === 0) {
-                select.innerHTML = '<option value="">Нет доступных тестов</option>';
-                return;
-            }
-            select.innerHTML = '<option value="">-- Выберите тест --</option>';
-            tests.forEach(testName => {
-                let opt = document.createElement('option');
-                opt.value = testName;
-                opt.textContent = testName;
-                select.appendChild(opt);
+        fetch(PROXY_URL + encodeURIComponent(WEB_APP_URL + '?action=getTestsList'))
+            .then(res => res.json())
+            .then(tests => {
+                const select = document.getElementById('testSelect');
+                if (!tests || tests.length === 0) {
+                    select.innerHTML = '<option value="">Нет доступных тестов</option>';
+                    return;
+                }
+                select.innerHTML = '<option value="">-- Выберите тест --</option>';
+                tests.forEach(testName => {
+                    let opt = document.createElement('option');
+                    opt.value = testName;
+                    opt.textContent = testName;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                console.error("Ошибка загрузки:", err);
+                document.getElementById('testSelect').innerHTML = '<option value="">Ошибка соединения с сервером</option>';
             });
-        });
     };
 
     // Загрузка вопросов выбранного теста
@@ -122,36 +94,42 @@
         document.getElementById('questionsContainer').innerHTML = '<p>Загрузка вопросов...</p>';
         document.getElementById('testScreen').classList.remove('hidden');
 
-        jsonp(`${WEB_APP_URL}?action=getQuestions&testName=${encodeURIComponent(activeTestName)}`, 'cbQuestions', function(questions) {
-            currentQuestions = questions;
-            const container = document.getElementById('questionsContainer');
-            container.innerHTML = '';
+        fetch(PROXY_URL + encodeURIComponent(WEB_APP_URL + `?action=getQuestions&testName=${encodeURIComponent(activeTestName)}`))
+            .then(res => res.json())
+            .then(questions => {
+                currentQuestions = questions;
+                const container = document.getElementById('questionsContainer');
+                container.innerHTML = '';
 
-            if (!questions || questions.length === 0) {
-                container.innerHTML = '<p>В этом тесте пока нет вопросов.</p>';
-                document.getElementById('submitBtn').style.display = 'none';
-                return;
-            }
-
-            questions.forEach((q, index) => {
-                let qDiv = document.createElement('div');
-                qDiv.className = 'question';
-                
-                let html = `
-                    <p class="question-title">
-                        <span>${index + 1}. ${q.text}</span>
-                        <span class="points-badge">Баллов: ${q.points}</span>
-                    </p>
-                    <div class="options">
-                `;
-                for (let optKey in q.options) {
-                    html += `<label><input type="radio" name="${q.id}" value="${optKey}" required> <b>${optKey})</b> ${q.options[optKey]}</label>`;
+                if (!questions || questions.length === 0) {
+                    container.innerHTML = '<p>В этом тесте пока нет вопросов.</p>';
+                    document.getElementById('submitBtn').style.display = 'none';
+                    return;
                 }
-                html += `</div>`;
-                qDiv.innerHTML = html;
-                container.appendChild(qDiv);
+
+                questions.forEach((q, index) => {
+                    let qDiv = document.createElement('div');
+                    qDiv.className = 'question';
+                    
+                    let html = `
+                        <p class="question-title">
+                            <span>${index + 1}. ${q.text}</span>
+                            <span class="points-badge">Баллов: ${q.points}</span>
+                        </p>
+                        <div class="options">
+                    `;
+                    for (let optKey in q.options) {
+                        html += `<label><input type="radio" name="${q.id}" value="${optKey}" required> <b>${optKey})</b> ${q.options[optKey]}</label>`;
+                    }
+                    html += `</div>`;
+                    qDiv.innerHTML = html;
+                    container.appendChild(qDiv);
+                });
+            })
+            .catch(err => {
+                console.error("Ошибка:", err);
+                alert('Не удалось загрузить вопросы теста.');
             });
-        });
     }
 
     // Отправка ответов
@@ -174,7 +152,7 @@
             }
         });
 
-        // Отправка через пиксель
+        // Отправка результатов
         const img = new Image();
         img.src = `${WEB_APP_URL}?${params.toString()}`;
 
