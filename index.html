@@ -162,18 +162,29 @@
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
-        const params = new URLSearchParams();
-        params.append('action', 'submit');
-        params.append('testName', activeTestName);
-        params.append('name', name);
-        params.append('group', group);
-
+        const answersObj = {};
         currentQuestions.forEach(q => {
             const selected = document.querySelector(`input[name="${q.id}"]:checked`);
             if (selected) {
-                params.append(q.id, selected.value);
+                answersObj[q.id] = selected.value;
             }
         });
+
+        const params = {
+            testName: activeTestName,
+            name: name,
+            group: group,
+            answers: JSON.stringify(answersObj)
+        };
+
+        loadViaJSONP('submit', params, function(res) {
+            document.getElementById('testScreen').classList.add('hidden');
+            document.getElementById('resultContainer').innerHTML = `
+                <h3>Спасибо, ${name}!</h3>
+                <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
+            `;
+        });
+    }
 
         // Отправка результатов
         const img = new Image();
