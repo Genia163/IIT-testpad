@@ -29,7 +29,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Получение тестов</option>
+                <option value="">Загрузка тестов</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -150,9 +150,17 @@
                     <div class="options">
                 `;
                 // Используем q.optionKeys, чтобы сохранить идеальный порядок из таблицы
+                // Очищаем контейнер вариантов и выводим их строго по массиву ключей
                 let keys = q.optionKeys || Object.keys(q.options);
+                
                 keys.forEach(optKey => {
-                    html += `<label><input type="radio" name="${q.id}" value="${optKey}" required> <b>${optKey})</b> ${q.options[optKey]}</label>`;
+                    // optKey здесь будет русской буквой ('А', 'Б', 'В' и т.д.)
+                    html += `
+                        <label style="display: block; margin-bottom: 8px; cursor: pointer;">
+                            <input type="radio" name="${q.id}" value="${optKey}" required> 
+                            <b>${optKey})</b> ${q.options[optKey]}
+                        </label>
+                    `;
                 });
                 html += `</div>`;
                 qDiv.innerHTML = html;
