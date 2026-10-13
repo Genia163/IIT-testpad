@@ -29,7 +29,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Загрузка тестов</option>
+                <option value="">Загрузка...</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -151,10 +151,18 @@
                 `;
                 // Используем q.optionKeys, чтобы сохранить идеальный порядок из таблицы
                 // Очищаем контейнер вариантов и выводим их строго по массиву ключей
+                // 🔍 Выводим весь объект вопроса и его ключи в консоль
+                console.log("--- Проверка вопроса №", index + 1, "---");
+                console.log("Объект вопроса (q):", q);
+                console.log("Массив optionKeys:", q.optionKeys);
+                console.log("Словарь options:", q.options);
+                
                 let keys = q.optionKeys || Object.keys(q.options);
+                console.log("Итоговые ключи для цикла (keys):", keys);
                 
                 keys.forEach(optKey => {
-                    // optKey здесь будет русской буквой ('А', 'Б', 'В' и т.д.)
+                    console.log(`  -> Обрабатываем ключ: "${optKey}", Текст: "${q.options[optKey]}"`);
+                    
                     html += `
                         <label style="display: block; margin-bottom: 8px; cursor: pointer;">
                             <input type="radio" name="${q.id}" value="${optKey}" required> 
@@ -162,6 +170,8 @@
                         </label>
                     `;
                 });
+                
+                console.log("Сгенерированный HTML для этого вопроса:\n", html);
                 html += `</div>`;
                 qDiv.innerHTML = html;
                 container.appendChild(qDiv);
