@@ -149,9 +149,11 @@
                     </p>
                     <div class="options">
                 `;
-                for (let optKey in q.options) {
+                // Используем q.optionKeys, чтобы сохранить идеальный порядок из таблицы
+                let keys = q.optionKeys || Object.keys(q.options);
+                keys.forEach(optKey => {
                     html += `<label><input type="radio" name="${q.id}" value="${optKey}" required> <b>${optKey})</b> ${q.options[optKey]}</label>`;
-                }
+                });
                 html += `</div>`;
                 qDiv.innerHTML = html;
                 container.appendChild(qDiv);
