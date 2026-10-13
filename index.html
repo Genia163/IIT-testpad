@@ -29,7 +29,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Загрузка тестов</option>
+                <option value="">Загрузка тестов......</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -180,15 +180,16 @@
     }
 
     // Отправка ответов
+    // Отправка ответов
     function submitQuiz(event) {
         event.preventDefault();
 
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
-       let answers = {};
-        // Проходим по всем вопросам теста
-        questions.forEach(q => {
+        let answers = {};
+        // Проходим по массиву currentQuestions (исправлено имя переменной)
+        currentQuestions.forEach(q => {
             // Ищем все отмеченные инпуты для данного вопроса (q.id)
             let checkedInputs = document.querySelectorAll(`input[name="${q.id}"]:checked`);
             
@@ -208,7 +209,7 @@
         params.append('testName', activeTestName);
         params.append('name', name);
         params.append('group', group);
-        params.append('answers', JSON.stringify(answersObj));
+        params.append('answers', JSON.stringify(answers)); // Исправлено с answersObj на answers
 
         document.getElementById('questionsContainer').innerHTML = '<p>Отправка и подсчет результатов...</p>';
         document.getElementById('submitBtn').style.display = 'none';
@@ -220,15 +221,14 @@
             const maxScore = res.calculatedMaxScore || 0;
             const percent = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
             
-            // Определяем цвет и статус в зависимости от процента
-            let color = '#e74c3c'; // Красный (< 50%)
+            let color = '#e74c3c'; 
             let gradeText = 'Требуется пересдача';
             
             if (percent >= 75) {
-                color = '#2ecc71'; // Зеленый (Отлично)
+                color = '#2ecc71'; 
                 gradeText = 'Отлично!';
             } else if (percent >= 50) {
-                color = '#f39c12'; // Оранжевый (Средне)
+                color = '#f39c12'; 
                 gradeText = 'Удовлетворительно';
             }
 
@@ -238,7 +238,6 @@
                 <p>Ваши результаты по тесту <b>«${activeTestName}»</b> успешно записаны в ведомость.</p>
                 
                 <div style="display: flex; align-items: center; justify-content: center; gap: 25px; margin: 30px auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); max-width: 400px;">
-                    <!-- Круговая диаграмма SVG -->
                     <div style="position: relative; width: 100px; height: 100px; flex-shrink: 0;">
                         <svg width="100" height="100" viewBox="0 0 36 36">
                             <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#eee" stroke-width="3.5"></path>
@@ -248,8 +247,6 @@
                             ${percent}%
                         </div>
                     </div>
-                    
-                    <!-- Текстовый блок рядом -->
                     <div style="text-align: left;">
                         <div style="font-size: 18px; font-weight: bold; color: ${color}; margin-bottom: 5px;">${gradeText}</div>
                         <div style="font-size: 15px; color: #333;">Набрано баллов: <b>${score} из ${maxScore}</b></div>
