@@ -29,7 +29,7 @@
         <label>Учебная группа:<br><input type="text" id="studentGroup" placeholder="ИВТ-101" required></label>
         <label>Выберите дисциплину / тест:<br>
             <select id="testSelect">
-                <option value="">Загрузка</option>
+                <option value="">Загрузка тестов</option>
             </select>
         </label>
         <button type="button" onclick="loadTest()">Начать тестирование</button>
@@ -48,7 +48,7 @@
 </div>
 
 <script>
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwDsaA9aQIZffOe85sbRCPxd1DAKtDuTBUGldU6zNhCRRFAlPMWqjYfT5kCQ5yPHNiKLQ/exec';
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzaMD5b1I6-S5SyErc_zjY-CLACx90lnhl_LksxSy3KTDtLsLWzLRvvsP_7OkJb6ATHOg/exec';
 
     let activeTestName = "";
     let currentQuestions = [];
@@ -186,11 +186,20 @@
         const name = document.getElementById('studentName').value.trim();
         const group = document.getElementById('studentGroup').value.trim();
 
-        const answersObj = {};
-        currentQuestions.forEach(q => {
-            const selected = document.querySelector(`input[name="${q.id}"]:checked`);
-            if (selected) {
-                answersObj[q.id] = selected.value;
+       let answers = {};
+        // Проходим по всем вопросам теста
+        questions.forEach(q => {
+            // Ищем все отмеченные инпуты для данного вопроса (q.id)
+            let checkedInputs = document.querySelectorAll(`input[name="${q.id}"]:checked`);
+            
+            if (checkedInputs.length > 0) {
+                if (q.isMultiple) {
+                    // Если это множественный выбор, собираем массив значений ['А', 'В']
+                    answers[q.id] = Array.from(checkedInputs).map(input => input.value);
+                } else {
+                    // Если одиночный выбор, берем строковое значение 'Б'
+                    answers[q.id] = checkedInputs[0].value;
+                }
             }
         });
 
